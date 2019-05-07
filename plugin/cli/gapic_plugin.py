@@ -7,13 +7,13 @@
 # modification, are permitted provided that the following conditions are
 # met:
 #
-#         * Redistributions of source code must retain the above copyright
+#     * Redistributions of source code must retain the above copyright
 # notice, this list of conditions and the following disclaimer.
-#         * Redistributions in binary form must reproduce the above
+#     * Redistributions in binary form must reproduce the above
 # copyright notice, this list of conditions and the following disclaimer
 # in the documentation and/or other materials provided with the
 # distribution.
-#         * Neither the name of Google Inc. nor the names of its
+#     * Neither the name of Google Inc. nor the names of its
 # contributors may be used to endorse or promote products derived from
 # this software without specific prior written permission.
 #
@@ -49,12 +49,35 @@ def render_new_file(renderer, response, resource):
     f.content = renderer.render(resource)
 
 
+def get_oneof_for_resource(collection_config, gapic_config):
+    oneof = None
+    for oneof_config in gapic_config.collection_oneofs.values():
+        for collection_name in oneof_config.collection_names:
+            if collection_name == collection_config.entity_name:
+                if oneof:
+                    raise ValueError("A collection cannot be part of multiple oneofs")
+                oneof = oneof_config
+    return oneof
+
 def generate_resource_name_types(response, gapic_config, java_package):
-    resources = gapic_utils.collect_resource_name_types(
-        gapic_config, java_package)
     renderer = pystache.Renderer(search_dirs=TEMPLATE_LOCATION)
-    for resource in resources:
+    for collection_config in gapic_config.collection_configs.values():
+        oneof = get_oneof_for_resource(collection_config, gapic_config)
+        resource = resource_name.ResourceName(collection_config, java_package, oneof)
         render_new_file(renderer, response, resource)
+
+    for fixed_config in gapic_config.fixed_collections.values():
+        oneof = get_oneof_for_resource(fixed_config, gapic_config)
+        resource = resource_name.ResourceNameFixed(fixed_config, java_package, oneof)
+        render_new_file(renderer, response, resource)
+
+    for oneof_config in gapic_config.collection_oneofs.values():
+        parent_resource = resource_name.ParentResourceName(oneof_config, java_package)
+        untyped_resource = resource_name.UntypedResourceName(oneof_config, java_package)
+        resource_factory = resource_name.ResourceNameFactory(oneof_config, java_package)
+        render_new_file(renderer, response, parent_resource)
+        render_new_file(renderer, response, untyped_resource)
+        render_new_file(renderer, response, resource_factory)
 
 
 def get_builder_view(field):
