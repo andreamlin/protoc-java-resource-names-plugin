@@ -39,19 +39,7 @@ from plugin.templates import resource_name
 GAPIC_CONFIG_ANY = '*'
 
 
-class GapicConfig(object):
-
-    def __init__(self,
-                 collection_configs={},
-                 fixed_collections={},
-                 collection_oneofs={},
-                 **kwargs):
-        self.collection_configs = collection_configs
-        self.fixed_collections = fixed_collections
-        self.collection_oneofs = collection_oneofs
-
-
-def __create_gapic_config(gapic_yaml):
+def create_gapic_config(gapic_yaml):
     """ Create a GapicConfig object from a gapic yaml.
     Args:
         gapic_yaml: Serialized GAPIC yaml.
@@ -100,6 +88,8 @@ def read_from_gapic_yaml(request):
         request (~.plugins_pb2.CodeGeneratorRequest): A code generator
             request received from protoc. The name of the YAML file
             is in ``request.parameter``.
+    Returns:
+        A final GapicConfig object containing all resource information.
     """
     # Load the YAML file from disk.
     yaml_file = request.parameter
@@ -127,7 +117,7 @@ def read_from_gapic_yaml(request):
             'config_schema_version', '1.0.0') != '1.0.0':
         gapic_yaml = reconstruct_gapic_yaml(gapic_yaml, request)
 
-    return __create_gapic_config(gapic_yaml)
+    return create_gapic_config(gapic_yaml)
 
 
 def reconstruct_gapic_yaml(gapic_config, request):  # noqa: C901
@@ -518,3 +508,15 @@ class CollectionOneof(object):
         self.resource_list = resources
         self.fixed_resource_list = fixed_resources
         self.collection_names = collection_names
+
+
+class GapicConfig(object):
+
+    def __init__(self,
+                 collection_configs={},
+                 fixed_collections={},
+                 collection_oneofs={},
+                 **kwargs):
+        self.collection_configs = collection_configs
+        self.fixed_collections = fixed_collections
+        self.collection_oneofs = collection_oneofs
